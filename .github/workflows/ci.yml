@@ -1,0 +1,115 @@
+# Runs on every push and pull request.
+#
+# The point is to catch a broken deploy before Render spends four minutes
+# building it. Render auto-deploys from `main`, and its free tier gives no
+# shell to debug with, so a build that only fails on the host is genuinely
+# painful to diagnose — far better to fail here, with logs.
+#
+# Three things are checked, in increasing cost:
+#   1. the logic tests (no database, about a second)
+#   2. the client actually builds
+#   3. the production bundle contains no demo credentials
+#
+# The end-to-end suite needs a real MongoDB, so it runs in its own job
+# against a service container.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Lets you re-run a check from the Actions tab without pushing again.
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Logic tests and build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+            client/package-lock.json
+
+      - name: Install
+        run: |
+          npm ci
+          npm ci --prefix server
+          npm ci --prefix client
+
+      - name: Logic tests
+        run: npm test
+
+      - name: Build the client
+        run: npm run build --prefix client
+
+      # The repository contains demo tooling (an account switcher, a guided
+      # walkthrough) that must never reach a public bundle. This asserts the
+      # build-time flag actually stripped it, rather than trusting that it did.
+      - name: Check the bundle for leaked demo tooling
+        run: node scripts/check-bundle.mjs
+
+      - name: Confirm the server boots against the built client
+        env:
+          NODE_ENV: production
+          JWT_SECRET: ci_only_secret_not_used_anywhere_real_0123456789
+          MONGO_URI: mongodb://127.0.0.1:27017/madad_ci_boot
+        # The server exits non-zero on an unsafe production configuration, so
+        # this also proves those guards are wired up. It is expected to fail
+        # to reach Mongo; what matters is that it got past config validation.
+        run: |
+          timeout 20s npm start --prefix server > boot.log 2>&1 || true
+          if grep -q "Refusing to start" boot.log; then
+            echo "Server rejected its own configuration:"
+            cat boot.log
+            exit 1
+          fi
+          grep -q "served from client/dist" boot.log || {
+            echo "Server did not find the client build:"; cat boot.log; exit 1; }
+          echo "Server booted and found the client build."
+
+  e2e:
+    name: End-to-end against MongoDB
+    runs-on: ubuntu-latest
+
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ping:1})'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+
+      - name: Install
+        run: |
+          npm ci
+          npm ci --prefix server
+
+      # Drives the whole lifecycle over HTTP: register, post, the geo feed,
+      # two volunteers racing for one task, the handshake gate, the UPI link,
+      # two-sided settlement, trust movement, reviews and access control.
+      - name: End-to-end suite
+        env:
+          MONGO_URI: mongodb://127.0.0.1:27017/madad_e2e
+        run: npm run test:e2e

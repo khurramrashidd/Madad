@@ -1,0 +1,45 @@
+{
+  "name": "madad",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Zero-commission peer-to-peer micro-bounty platform (MERN + PWA + Capacitor)",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "scripts": {
+    "start": "node scripts/start.mjs",
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "doctor": "node scripts/doctor.mjs",
+    "set-ip": "node scripts/set-ip.mjs",
+    "seed": "cd server && npm run seed:reset",
+    "move-demo": "node scripts/move-demo.mjs",
+    "test": "cd server && node src/seed/selftest.js",
+    "test:e2e": "node scripts/e2e.mjs",
+    "test:prod": "node scripts/smoke-prod.mjs",
+    "build": "npm install --prefix server && npm install --prefix client && cd client && npm run build && cd .. && npm run check:bundle",
+    "build:prod": "npm install --prefix server && npm install --prefix client && npm run build --prefix client",
+    "start:prod": "NODE_ENV=production npm start --prefix server",
+    "preview:prod": "npm run build --prefix client && npm run start:prod",
+    "dev": "concurrently -n api,web -c yellow,cyan \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "serve": "cd server && npm start",
+    "android:init": "cd client && npm run build && npm run cap:add && npm run cap:assets && cd .. && npm run android:patch",
+    "android:patch": "node scripts/patch-android.mjs",
+    "android:assets": "cd client && npm run cap:assets",
+    "android:live": "cd client && npm run cap:live",
+    "android:run": "node scripts/android-run.mjs",
+    "android:reverse": "node scripts/android-run.mjs --reverse-only",
+    "android:wifi": "node scripts/android-run.mjs --wifi",
+    "android:sync": "cd client && npm run cap:sync",
+    "android:open": "cd client && npm run cap:open",
+    "android:apk": "node scripts/android-run.mjs --build-only",
+    "android:apk:release": "cd client && npm run cap:apk:release",
+    "android:keystore": "node scripts/make-keystore.mjs",
+    "check:bundle": "node scripts/check-bundle.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

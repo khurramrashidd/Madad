@@ -1,0 +1,51 @@
+# OPTIONAL — off by default.
+#
+# A free Render service spins down after 15 minutes without traffic, and the
+# next visitor waits roughly a minute while it starts again. You said that is
+# acceptable, so this is disabled: the `schedule` block below is commented
+# out, and the workflow only runs if you trigger it by hand.
+#
+# To turn it on:
+#   1. Uncomment the `schedule` block.
+#   2. Add a repository variable named MADAD_URL with your Render address
+#      (Settings -> Secrets and variables -> Actions -> Variables).
+#   3. Commit. It will then ping /api/health every 13 minutes.
+#
+# Worth knowing before you do:
+#
+#   * The free tier allows 750 instance hours per calendar month. A service
+#     kept awake around the clock uses about 744 — so this very nearly spends
+#     the whole allowance, and ANY other free service in the same Render
+#     workspace would then be suspended for the rest of the month.
+#   * GitHub's cron is best-effort and often runs late on a busy shared
+#     runner, so a 13-minute schedule does not guarantee a ping inside every
+#     15-minute window.
+#   * Socket.IO traffic also counts as activity, so while anyone has the app
+#     open the service stays awake by itself.
+#
+# cron-job.org is the better tool for this if you decide you want it: it is
+# free, fires punctually, and does not consume your Actions minutes.
+name: Keep awake (optional)
+
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: '*/13 * * * *'
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping the health endpoint
+        env:
+          URL: ${{ vars.MADAD_URL }}
+        run: |
+          if [ -z "$URL" ]; then
+            echo "MADAD_URL repository variable is not set — nothing to ping."
+            echo "Set it to your Render address, e.g. https://madad.onrender.com"
+            exit 0
+          fi
+          # A cold start can take ~60s, so allow generously before failing.
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 120 "$URL/api/health")
+          echo "GET $URL/api/health -> $code"
+          test "$code" = "200"

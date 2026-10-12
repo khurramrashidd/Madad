@@ -1,0 +1,260 @@
+/* Self-hosted so the app keeps its type offline and identical on every device.
+   Body: Inter. Display: Plus Jakarta Sans (rounder, more geometric — the voice). */
+@import '@fontsource/inter/latin-400.css';
+@import '@fontsource/inter/latin-500.css';
+@import '@fontsource/inter/latin-600.css';
+@import '@fontsource/inter/latin-700.css';
+@import '@fontsource/plus-jakarta-sans/latin-600.css';
+@import '@fontsource/plus-jakarta-sans/latin-700.css';
+@import '@fontsource/plus-jakarta-sans/latin-800.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+    /* ---- Light theme ---- */
+    /* The ink ramp runs light to dark. Every surface in the app is drawn from
+       these, so redefining them below is all dark mode needs. */
+    --ink-50: 246 247 248;
+    --ink-100: 237 239 241;
+    --ink-200: 224 227 231;
+    --ink-300: 202 208 214;
+    --ink-400: 153 162 172;
+    --ink-500: 107 116 126;
+    --ink-600: 76 84 92;
+    --ink-700: 54 61 68;
+    --ink-800: 33 38 43;
+    --ink-900: 20 26 30;
+    --ink-950: 10 14 17;
+
+    --surface: 255 255 255;
+    --surface-2: 246 247 248;
+
+    /* The focus ring needs a surface-coloured inner halo to read cleanly. */
+    --ring-backdrop: 255 255 255;
+
+    color-scheme: light;
+  }
+
+  /**
+   * Dark theme.
+   *
+   * The ramp is inverted rather than merely darkened: ink-50 becomes the
+   * near-black page, ink-900 becomes near-white text. Because every component
+   * says "ink-50 background, ink-900 text" and means "page background,
+   * primary text", they all keep working with no per-component changes.
+   *
+   * The dark end is deliberately not pure black — #0E1316 against #171D21
+   * cards gives real elevation, where black-on-black flattens everything and
+   * reads as broken on OLED.
+   */
+  [data-theme='dark'] {
+    --ink-50: 14 19 22;
+    --ink-100: 23 29 33;
+    --ink-200: 33 40 46;
+    --ink-300: 49 58 65;
+    --ink-400: 113 124 134;
+    --ink-500: 148 158 168;
+    --ink-600: 183 191 199;
+    --ink-700: 209 215 220;
+    --ink-800: 230 234 237;
+    --ink-900: 243 245 247;
+    --ink-950: 255 255 255;
+
+    --surface: 23 29 33;
+    --surface-2: 33 40 46;
+
+    --ring-backdrop: 23 29 33;
+
+    color-scheme: dark;
+  }
+
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html,
+  body,
+  #root {
+    @apply h-full;
+  }
+
+  body {
+    @apply bg-ink-50 text-ink-900 font-sans antialiased;
+    letter-spacing: -0.006em;
+    overscroll-behavior-y: none;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-display tracking-tightish;
+  }
+
+  /* Inputs must be >=16px or mobile Safari zooms in on focus. */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-ink-300 rounded-full;
+  }
+
+  /* One consistent focus ring for keyboard users across the whole app.
+     The inner halo tracks the theme, or the ring vanishes on dark. */
+  :focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px rgb(var(--ring-backdrop)),
+      0 0 0 4px theme('colors.brand.500');
+    border-radius: 0.6rem;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl font-semibold
+           transition-all duration-150 active:scale-[0.98]
+           disabled:opacity-50 disabled:pointer-events-none select-none;
+  }
+  .btn-primary {
+    @apply btn bg-brand-600 text-white hover:bg-brand-500 shadow-brand-glow;
+  }
+  /**
+   * Same inversion trap as .seg-on: ink-900 becomes near-white in dark mode,
+   * so a literal `text-white` label disappears. ink-50 is the page
+   * background in the active theme, which contrasts with ink-900 in both.
+   * (bg-brand-600 and bg-danger are fixed colours, so `text-white` is
+   * correct on those and left alone.)
+   */
+  .btn-dark {
+    @apply btn bg-ink-900 text-ink-50 hover:bg-ink-800;
+  }
+  .btn-ghost {
+    @apply btn bg-ink-100 text-ink-700 hover:bg-ink-200;
+  }
+  .btn-danger {
+    @apply btn bg-danger text-white hover:brightness-110;
+  }
+  .btn-outline {
+    @apply btn border border-ink-200 bg-surface text-ink-800 hover:border-ink-300 hover:bg-ink-50;
+  }
+  .btn-lg {
+    @apply px-6 text-[0.95rem];
+    height: 3.25rem;
+  }
+  .btn-md {
+    @apply h-11 px-4 text-sm;
+  }
+  .btn-sm {
+    @apply h-9 px-3.5 text-sm;
+  }
+
+  .card {
+    @apply bg-surface rounded-2xl shadow-card border border-ink-100;
+  }
+  /* A card that is also a link/button — lifts a touch on hover. */
+  .card-interactive {
+    @apply card transition-all duration-150 hover:shadow-soft hover:border-ink-200 active:scale-[0.995];
+  }
+
+  .input {
+    @apply w-full h-12 px-3.5 rounded-xl border border-ink-200 bg-surface
+           placeholder:text-ink-400 outline-none transition
+           focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10;
+  }
+  .textarea {
+    @apply w-full px-3.5 py-3 rounded-xl border border-ink-200 bg-surface
+           placeholder:text-ink-400 outline-none transition resize-none
+           focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10;
+  }
+  .label {
+    @apply block text-sm font-semibold text-ink-700 mb-1.5;
+  }
+  .hint {
+    @apply text-xs text-ink-500 mt-1.5;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold;
+  }
+  /* The ₹ bounty, everywhere it appears. */
+  .pill-money {
+    @apply inline-flex items-center gap-1 rounded-full bg-money-50 text-money-700
+           font-bold tabular-nums ring-1 ring-money-200;
+  }
+
+  /* Segmented control / filter chips row. */
+  .seg {
+    @apply inline-flex items-center justify-center h-9 px-3.5 rounded-full text-sm font-semibold
+           whitespace-nowrap transition-colors border border-transparent;
+  }
+  .seg-off {
+    @apply seg bg-surface text-ink-600 border-ink-200 hover:bg-ink-50;
+  }
+  /**
+   * The selected segment.
+   *
+   * `bg-ink-900 text-white` is right in light mode and invisible in dark:
+   * ink-900 inverts to near-white, so it became white text on a white pill.
+   * `text-ink-50` is the page background in whichever theme is active, which
+   * is the correct contrast partner for an ink-900 fill in both.
+   */
+  .seg-on {
+    @apply seg bg-ink-900 text-ink-50 border-ink-900;
+  }
+
+  .skeleton {
+    @apply bg-ink-100 rounded-lg;
+    background-image: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+    background-size: 500px 100%;
+    background-repeat: no-repeat;
+    @apply animate-shimmer;
+  }
+
+  .safe-top {
+    padding-top: calc(var(--safe-top) + 0.5rem);
+  }
+  .safe-bottom {
+    padding-bottom: calc(var(--safe-bottom) + 0.5rem);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Leaflet overrides to match the app. */
+.leaflet-container {
+  @apply rounded-2xl font-sans z-0;
+  background: #eef0f2;
+}
+.leaflet-control-attribution {
+  font-size: 9px !important;
+  @apply bg-surface/80;
+}
+.leaflet-popup-content-wrapper {
+  @apply rounded-xl shadow-lift;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,82 @@
+# Render blueprint — one service serving the API and the React build.
+#
+# Why a single service rather than an API plus a static site:
+#
+#   * One origin means no CORS to configure, and Socket.IO connects
+#     same-origin with nothing to allow-list.
+#   * It is HTTPS, which browsers REQUIRE before handing out precise
+#     geolocation. Over plain HTTP, `navigator.geolocation` is simply not
+#     available — which is the single biggest reason location "doesn't work"
+#     when the app is served over a LAN address.
+#   * The free tier allows one free web service per workspace, so splitting
+#     into two would mean paying for one of them.
+#
+# Render reads this file on first deploy. Afterwards, settings in the
+# dashboard win, so changing a value here does not silently reconfigure a
+# running service — change it in the dashboard too.
+services:
+  - type: web
+    name: madad
+    runtime: node
+    plan: free
+    region: singapore # closest region to India; lowest latency for users
+    branch: main
+
+    # Installs both halves, builds the SPA, then installs only production
+    # dependencies for the server. The client's build tools are not needed at
+    # runtime and would just slow cold starts.
+    buildCommand: |
+      npm install --prefix server
+      npm install --prefix client
+      npm run build --prefix client
+    startCommand: npm start --prefix server
+
+    healthCheckPath: /api/health
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # Generated once by Render and then kept. Never commit a real secret
+      # here — the server refuses to start in production with the example
+      # value, precisely so this cannot be forgotten.
+      - key: JWT_SECRET
+        generateValue: true
+
+      - key: JWT_EXPIRES_IN
+        value: 30d
+
+      # Set these in the dashboard — they are account-specific.
+      - key: MONGO_URI
+        sync: false # MongoDB Atlas connection string
+      - key: ADMIN_EMAILS
+        sync: false # your email, to get the admin dashboard
+      - key: VAPID_PUBLIC_KEY
+        sync: false # npx web-push generate-vapid-keys
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        sync: false # mailto:you@example.com
+      - key: SARVAM_API_KEY
+        sync: false # optional; blank falls back to the browser recogniser
+
+      # The SPA is same-origin, so this matters only for the Android app.
+      - key: CLIENT_ORIGIN
+        value: http://localhost,capacitor://localhost
+
+      # Where demo tasks and new accounts start, before a real GPS fix.
+      - key: SEED_CENTER_LAT
+        value: "18.9894"
+      - key: SEED_CENTER_LNG
+        value: "73.1175"
+      - key: SEED_CITY
+        value: Panvel
+
+      - key: MIN_BOUNTY
+        value: "10"
+      - key: MAX_BOUNTY
+        value: "500"
+      - key: TRUST_STARTING_SCORE
+        value: "70"
+      - key: TRUST_RESTRICT_BELOW
+        value: "40"

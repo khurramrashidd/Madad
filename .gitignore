@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+.DS_Store
+android/
+ios/
+.vscode/
+.idea/
+
+# built by npm run android:run / android:apk
+Madad-debug.apk
